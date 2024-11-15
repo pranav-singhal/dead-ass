@@ -21,41 +21,51 @@ interface Conversation {
 }
 
 const safetyCodeStyles = {
-    'code green': 'bg-green-100 text-green-800 border border-green-300',
-    'code yellow': 'bg-yellow-100 text-yellow-800 border border-yellow-300',
-    'code red': 'bg-red-100 text-red-800 border border-red-300',
-    'code blue': 'bg-blue-100 text-blue-800 border border-blue-300'
+    'code green': 'bg-green-100 text-green-800 border-l-4 border-green-500',
+    'code yellow': 'bg-yellow-100 text-yellow-800 border-l-4 border-yellow-500',
+    'code red': 'bg-red-100 text-red-800 border-l-4 border-red-500',
+    'code blue': 'bg-blue-100 text-blue-800 border-l-4 border-blue-500'
 };
 
-const safetyCodeDescriptions = {
-    'code green': 'Safe - No danger detected',
-    'code yellow': 'Caution - Potential risk',
-    'code red': 'Danger - Immediate threat',
-    'code blue': 'Emergency - Life threatening'
+const safetyCodeIcons = {
+    'code green': '✓',
+    'code yellow': '⚠️',
+    'code red': '🚨',
+    'code blue': '🏥'
 };
 
 export default function ConversationsPage() {
     const [conversations, setConversations] = useState<Conversation[]>([]);
+    const [expandedSession, setExpandedSession] = useState<string | null>(null);
 
     useEffect(() => {
         const eventSource = new EventSource('/api/stream');
 
         eventSource.onmessage = (event) => {
             const newConversation = JSON.parse(event.data);
-            setConversations(prev => {
-                const existingConvIndex = prev.findIndex(
+
+            setConversations((prevConversations) => {
+                // Create a new reference for the array
+                const updatedConversations = [...prevConversations];
+
+                const existingConvIndex = updatedConversations.findIndex(
                     conv => conv.session_id === newConversation.session_id
                 );
 
                 if (existingConvIndex === -1) {
-                    return [...prev, newConversation];
+                    // If conversation doesn't exist, add it to the array
+                    return [...updatedConversations, newConversation];
                 }
 
-                const updatedConversations = [...prev];
-                const existingConv = updatedConversations[existingConvIndex];
-
-                existingConv.segments = newConversation.segments;
-                existingConv.fullText = newConversation.fullText;
+                // Create a new reference for the existing conversation
+                updatedConversations[existingConvIndex] = {
+                    ...updatedConversations[existingConvIndex],
+                    segments: [
+                        ...updatedConversations[existingConvIndex].segments,
+                        ...newConversation.segments
+                    ],
+                    fullText: newConversation.fullText
+                };
 
                 return updatedConversations;
             });
@@ -72,60 +82,68 @@ export default function ConversationsPage() {
     }, []);
 
     return (
-        <div className="p-6 max-w-4xl mx-auto">
-            <h1 className="text-2xl font-bold mb-6">Live Conversations</h1>
+        <div className="p-4 max-w-4xl mx-auto">
+            <h1 className="text-2xl font-bold mb-6">Safety Monitoring Dashboard</h1>
 
-            {conversations.map((conversation, index) => {
-                const safety_code = conversation.segments[0]?.safety_code;
+            <div className="space-y-2">
+                {conversations.map((conversation) => {
+                    const safety_code = conversation.segments[0]?.safety_code || 'code green';
 
-                return (
-                    <div key={`${conversation.session_id}-${index}`}
-                        className="mb-8 p-4 border rounded-lg">
-                        <h2 className="text-lg font-semibold mb-4">
-                            Session: {conversation.session_id}
-                        </h2>
 
-                        {safety_code && (
-                            <div className={`mb-6 p-4 rounded-lg ${safetyCodeStyles[safety_code]}`}>
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <h3 className="font-bold text-lg mb-2">Safety Classification</h3>
-                                        <div className="text-sm font-medium">
-                                            {safetyCodeDescriptions[safety_code]}
+                    return (
+                        <div
+                            key={conversation.session_id}
+                            className={`${safetyCodeStyles[safety_code]} rounded-lg overflow-hidden`}
+                        >
+                            {/* Header - Always visible */}
+                            <div
+                                className="p-4 cursor-pointer hover:opacity-90 transition-opacity"
+
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-3">
+
+                                        <div>
+                                            <div className="font-medium">
+                                                Session: {conversation.session_id.slice(0, 8)}...
+                                            </div>
+                                            <div className="text-sm opacity-75">
+                                                {conversation.segments.length} messages
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="text-2xl font-bold">
-                                        {safety_code.toUpperCase()}
-                                    </div>
+
                                 </div>
 
-                                {conversation.fullText && (
-                                    <div className="mt-4">
-                                        <div className="font-medium mb-1">Classified Text:</div>
-                                        <div className="bg-white bg-opacity-50 p-3 rounded">
-                                            {conversation.fullText}
-                                        </div>
-                                    </div>
-                                )}
                             </div>
-                        )}
 
-                        <div className="space-y-4">
-                            {conversation.segments.map((segment) => (
-                                <div key={`${segment.speaker}-${segment.start}`}
-                                    className="p-4 bg-white rounded-lg shadow-sm">
-                                    <div className="font-medium mb-2">
-                                        {segment.speaker}
-                                    </div>
-                                    <div>
-                                        {segment.text}
-                                    </div>
+                            {/* Expanded Content */}
+
+                            <div className="border-t bg-white bg-opacity-50 p-4">
+                                <div className="space-y-3">
+                                    {conversation.segments.map((segment, idx) => (
+                                        <div
+                                            key={`${segment.speaker}-${segment.start}-${idx}`}
+                                            className="flex space-x-3"
+                                        >
+                                            <div>
+                                                {segment.safety_code}
+                                            </div>
+                                            <div className="font-medium w-24 flex-shrink-0">
+                                                {segment.speaker}:
+                                            </div>
+                                            <div className="flex-1">
+                                                {segment.text}
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
+                            </div>
+
                         </div>
-                    </div>
-                );
-            })}
+                    );
+                })}
+            </div>
         </div>
     );
 } 

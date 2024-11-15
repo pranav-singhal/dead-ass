@@ -1,5 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import green from '../../lib/actions/codes/green';
+import red from '../../lib/actions/codes/red';
 import { classifyText, SafetyCode } from '../../lib/openai';
 
 interface Segment {
@@ -34,7 +36,7 @@ if (!global.messageBuffer) {
 }
 
 function shouldStreamMessage(text: string): boolean {
-    return text.split(' ').length >= 20;
+    return text.split(' ').length >= 10;
 }
 
 async function streamBufferedMessages(sessionId: string) {
@@ -48,6 +50,17 @@ async function streamBufferedMessages(sessionId: string) {
 
         const safety_code = await classifyText(bufferedConv.fullText);
         console.log('Classification result:', safety_code);
+        switch (safety_code) {
+            case 'code red':
+                red();
+                break;
+            case 'code green':
+                green();
+                break;
+
+            default:
+                green();
+        }
 
         const segmentsToStream = segments.map(seg => ({
             ...seg,
@@ -77,9 +90,11 @@ async function streamBufferedMessages(sessionId: string) {
 }
 
 export async function POST(request: NextRequest) {
+
+
     try {
         const body: WebhookPayload = await request.json();
-
+        console.log("payload body", body);
         // Initialize buffer for this session if it doesn't exist
         if (!global.messageBuffer[body.session_id]) {
             global.messageBuffer[body.session_id] = {
