@@ -1,12 +1,11 @@
 import {
-    createPublicClient,
     createWalletClient,
     http,
     parseEther,
     type Address
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { mainnet, sepolia } from 'viem/chains';
+import { sepolia } from 'viem/chains';
 import { sendMessage } from '../../../api/xmtp/message';
 
 export default async function red() {
@@ -31,11 +30,6 @@ export default async function red() {
         await sendMessage({ message: "🚨 Please try and reach out to him." });
 
         // Resolve ENS names to addresses using Sepolia RPC
-        const publicClient = createPublicClient({
-            chain: mainnet,
-            transport: http()
-        });
-
         // Get all addresses from ENS names
 
         const addresses = ["0xb8dcd1175edede232e5f2c05bac9a9a896b59d313fb417b9019173cd77d138b3"];

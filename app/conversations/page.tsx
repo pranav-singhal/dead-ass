@@ -1,13 +1,12 @@
 "use client";
 
+import { Header } from "@/components/Header";
+import { CheckCircle, Loader } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SafetyCode } from "../lib/openai";
-import { Header } from "@/components/Header";
-import { OverAll } from "@/components/OverAll";
-import { CheckCircle, Loader } from "lucide-react";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface Segment {
   text: string;
@@ -35,7 +34,6 @@ const safetyCodeStyles = {
 
 export default function ConversationsPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [expandedSession, setExpandedSession] = useState<string | null>(null);
   const [isFundsTransferring, setIsFundsTransferring] = useState(false);
   const [isFundsTransferred, setIsFundsTransferred] = useState(false);
   const [isAlerting, setIsAlerting] = useState(false);
@@ -124,24 +122,17 @@ export default function ConversationsPage() {
               <div className="space-y-2">
                 {conversations.map((conversation) => {
                   const safety_code =
-                    conversation.segments[0]?.safety_code || "code green";
+                    conversation.segments[conversation.segments.length - 1]
+                      ?.safety_code || "code green";
 
                   return (
                     <div
                       key={conversation.session_id}
                       className={`${safetyCodeStyles[safety_code]} rounded-lg overflow-hidden`}
                     >
-                      {/* Expanded Content */}
-
                       <div className="border-t bg-white bg-opacity-50 p-4">
-                        <div className="text-xl font-bold space-y-3">
-                          {conversation.segments.map((segment, idx) => (
-                            <div
-                              key={`${segment.speaker}-${segment.start}-${idx}`}
-                            >
-                              {segment.safety_code}
-                            </div>
-                          ))}
+                        <div className="text-xl font-bold">
+                          {safety_code}
                         </div>
                       </div>
                     </div>
@@ -218,18 +209,15 @@ export default function ConversationsPage() {
                 return (
                   <div
                     key={conversation.session_id}
-                    className={`${safetyCodeStyles[safety_code]} rounded-lg overflow-hidden`}
+                    className={`${safetyCodeStyles[safety_code]} rounded-lg overflow-hidden w-full`}
                   >
                     <div className="border-t bg-white bg-opacity-50 p-4">
                       <div className="space-y-3">
-                        {conversation.segments.map((segment, idx) => (
-                          <div
-                            key={`${segment.speaker}-${segment.start}-${idx}`}
-                            className="flex space-x-3"
-                          >
-                            <div className="flex-1">{segment.text}</div>
+                        <div className="flex space-x-3">
+                          <div className="flex-1">
+                            {conversation.fullText}
                           </div>
-                        ))}
+                        </div>
                       </div>
                     </div>
                   </div>
