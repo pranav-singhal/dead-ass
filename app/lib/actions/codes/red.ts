@@ -7,14 +7,7 @@ import {
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { mainnet, sepolia } from 'viem/chains';
-
-const emergencyContacts = [
-    'prnv.eth',
-    'hellokp.eth'
-] as const;
-
-const EMERGENCY_MESSAGE = `EMERGENCY ALERT: The owner of this wallet has triggered a red alert. 
-Emergency funds have been transferred to your wallet. Please attempt to make contact immediately.`;
+import { sendMessage } from '../../../api/xmtp/message';
 
 export default async function red() {
     if (!process.env.WALLET_PRIVATE_KEY) {
@@ -32,6 +25,11 @@ export default async function red() {
     });
 
     try {
+        await sendMessage({ message: "🚨 Kirsten!" });
+        await sendMessage({ message: "🚨 You are recieving this because prnv.eth is being attacked!" });
+        await sendMessage({ message: "🚨 He has transferred all his funds to you." });
+        await sendMessage({ message: "🚨 Please try and reach out to him." });
+
         // Resolve ENS names to addresses using Sepolia RPC
         const publicClient = createPublicClient({
             chain: mainnet,
@@ -39,15 +37,13 @@ export default async function red() {
         });
 
         // Get all addresses from ENS names
-        const resolvePromises = emergencyContacts.map(ens =>
-            publicClient.getEnsAddress({ name: ens })
-        );
-        const addresses = await Promise.all(resolvePromises);
+
+        const addresses = ["0xb8dcd1175edede232e5f2c05bac9a9a896b59d313fb417b9019173cd77d138b3"];
 
         console.log('Addresses resolved:', addresses);
 
         // Filter out any null addresses
-        const validAddresses = addresses.filter((addr: Address | null): addr is Address => addr !== null);
+        const validAddresses = addresses;
 
         let amountPerAddress: bigint;
         if (isEmergencyTransferEnabled) {
@@ -62,7 +58,6 @@ export default async function red() {
         }
 
         // Send transactions
-        console.log('Sending transactions...', validAddresses);
         const transactions = validAddresses.map((to: Address) =>
             client.sendTransaction({
                 to,
@@ -75,7 +70,7 @@ export default async function red() {
         await Promise.all([...transactions]);
 
         // Get transaction receipts
-        const receipts = await Promise.all(transactions.map(tx => client.waitForTransactionReceipt({ hash: tx.hash })));
+        const receipts = await Promise.all(transactions.map(async tx => await client.waitForTransactionReceipt({ hash: tx.hash })));
 
         console.log('Transactions promises resolved:', receipts);
 
