@@ -33,16 +33,14 @@ const safetyCodeStyles = {
   "code blue": "bg-blue-100 text-blue-800 border-l-4 border-blue-500",
 };
 
-const safetyCodeIcons = {
-  "code green": "✓",
-  "code yellow": "⚠️",
-  "code red": "🚨",
-  "code blue": "🏥",
-};
-
 export default function ConversationsPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
+  const [isFundsTransferring, setIsFundsTransferring] = useState(false);
+  const [isFundsTransferred, setIsFundsTransferred] = useState(false);
+  const [isAlerting, setIsAlerting] = useState(false);
+  const [isAlerted, setIsAlerted] = useState(false);
+  console.log({ conversations });
 
   useEffect(() => {
     const eventSource = new EventSource("/api/stream");
@@ -87,6 +85,29 @@ export default function ConversationsPage() {
     };
   }, []);
 
+  useEffect(() => {
+    // Check if any conversation has code red
+    const hasCodeRed = conversations.some((conv) =>
+      conv.segments.some((segment) => segment.safety_code === "code red")
+    );
+
+    if (hasCodeRed) {
+      // Start the alert sequence
+      setIsAlerting(true);
+      setTimeout(() => {
+        setIsAlerting(false);
+        setIsAlerted(true);
+      }, 1000);
+
+      // Start the funds transfer sequence
+      setIsFundsTransferring(true);
+      setTimeout(() => {
+        setIsFundsTransferring(false);
+        setIsFundsTransferred(true);
+      }, 5000);
+    }
+  }, [conversations]);
+
   return (
     <div>
       <Header />
@@ -115,7 +136,11 @@ export default function ConversationsPage() {
                       <div className="border-t bg-white bg-opacity-50 p-4">
                         <div className="text-xl font-bold space-y-3">
                           {conversation.segments.map((segment, idx) => (
-                            <div>{segment.safety_code}</div>
+                            <div
+                              key={`${segment.speaker}-${segment.start}-${idx}`}
+                            >
+                              {segment.safety_code}
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -125,16 +150,53 @@ export default function ConversationsPage() {
               </div>
               <div className="flex flex-1 flex-col gap-4 max-w-full">
                 <div className="flex items-center gap-2">
-                  <CheckCircle size={20} />
-                  <p className="text-muted-foreground max-w-full underline">
-                    Funds Sent to Emergency Contacts
-                  </p>
+                  {isFundsTransferred ? (
+                    <>
+                      <CheckCircle className="text-green-500" size={20} />
+                      <p className="text-muted-foreground max-w-full">
+                        Funds Transferred
+                      </p>
+                    </>
+                  ) : isFundsTransferring ? (
+                    <>
+                      <Loader className="animate-spin" size={20} />
+                      <p className="text-muted-foreground max-w-full">
+                        Funds are being transferred to your emergency
+                        contacts...
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={20} />
+                      <p className="text-muted-foreground max-w-full">
+                        Funds Protected
+                      </p>
+                    </>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Loader size={20} />
-                  <p className="text-muted-foreground max-w-full">
-                    Alert Sent to Emergency Contacts
-                  </p>
+                  {isAlerted ? (
+                    <>
+                      <CheckCircle className="text-green-500" size={20} />
+                      <p className="text-muted-foreground max-w-full">
+                        Friends and Family Alerted
+                      </p>
+                    </>
+                  ) : isAlerting ? (
+                    <>
+                      <Loader className="animate-spin" size={20} />
+                      <p className="text-muted-foreground max-w-full">
+                        Alerting Friends and Family...
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={20} />
+                      <p className="text-muted-foreground max-w-full">
+                        Alert System Ready
+                      </p>
+                    </>
+                  )}
                 </div>
                 <div className="flex items-center gap-2" />
               </div>
@@ -145,6 +207,10 @@ export default function ConversationsPage() {
               <h4 className="font-semibold text-xl">
                 Your Safety Transcript 🔊
               </h4>
+              <p className="mb-auto text-muted-foreground">
+                This is a real-time recording of voices in your current
+                surroundings. Based on this, we assess if you are in danger.{" "}
+              </p>
               {conversations.map((conversation) => {
                 const safety_code =
                   conversation.segments[0]?.safety_code || "code green";
